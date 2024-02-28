@@ -2,7 +2,8 @@
 
 === Plain Text Reports
 
-By default, JGiven outputs plain text reports to the console when executed. To disable plain text reports set the following Java system property:
+By default, JGiven outputs plain text reports to the console when executed.
+To disable plain text reports, set the following Java system property:
 
 [source,properties]
 ----
@@ -11,7 +12,10 @@ jgiven.report.text=false
 
 === JSON Reports
 
-By default, JGiven will generate JSON reports into the `jgiven-reports/json` directory. JGiven tries to autodetect when it is executed by the Maven surefire plugin and in that case generates the reports into `target/jgiven-reports/json`. To disable JSON report generation set the following Java system property:
+By default, JGiven will generate JSON reports into the `jgiven-reports/json` directory.
+JGiven tries to autodetect when it is executed by the Maven surefire plugin
+and in that case generates the reports into `target/jgiven-reports/json`.
+To disable JSON report generation set the following Java system property:
 
 [source,properties]
 ----
@@ -20,7 +24,7 @@ jgiven.report.enabled=false
 
 [NOTE]
 ====
-In order to generate HTML or AsciiDoc reports, JSON reports are required.
+To generate HTML or AsciiDoc reports, JSON reports are required.
 ====
 
 ==== Change report directory
@@ -43,9 +47,8 @@ the source directory for the JSON reports needs to be set accordingly
 
 ==== Dry Run
 
-There is a dry run option, which just generates a report without actually
-executing the code. This might be helpful to generate a test report quickly
-without having to wait for the tests to be executed.
+There is a dry run option, which just generates a report without actually executing the code.
+This might be helpful to generate a test report quickly without having to wait for the tests to be executed.
 
 [source,properties]
 ----
@@ -60,12 +63,10 @@ all tests will be reported as successful.
 
 === HTML Report
 
-To generate an HTML report you have to run the JGiven report generator
-with the `html` format option.
+To generate an HTML report, you have to run the JGiven report generator with the `html` format option.
 The reporter is part of the `jgiven-html5-report` module.
-The report generator can be executed on the command line as
-follows (assuming that the `jgiven-core` and the `jgiven-html5-report` JAR
-and all required dependencies are on the Java CLASSPATH)
+The report generator can be executed on the command line as follows
+(assuming that the `jgiven-core` and the `jgiven-html5-report` JAR and all required dependencies are on the Java CLASSPATH)
 
 [source,console]
 ----
@@ -75,7 +76,7 @@ $ java com.tngtech.jgiven.report.ReportGenerator \
     [--targetDir=<targetDir>] \
 ----
 
-To see the HTML report in action you can have a look at the
+To see the HTML report in action, you can have a look at the
 https://jgiven.org/jgiven-report/html5/[HTML report of JGiven itself]
 
 === AsciiDoc Report
@@ -86,7 +87,7 @@ The generator for AsciiDoc reports is currently still in an experimental phase.
 Not all functions of the HTML report are supported.
 ====
 
-To generate an AsciiDoc report you have to run the JGiven report generator with the `asciidoc` format option.
+To generate an AsciiDoc report, you have to run the JGiven report generator with the `asciidoc` format option.
 The report generator can be executed on the command line as follows
 (assuming that the `jgiven-core` JAR and all required dependencies are on the Java CLASSPATH)
 
@@ -98,12 +99,12 @@ $ java com.tngtech.jgiven.report.ReportGenerator \
     [--targetDir=<targetDir>]
 ----
 
-To see the AsciiDoc report in action you can have a look at the
+To see the AsciiDoc report in action, you can have a look at the
 https://jgiven.org/jgiven-report/asciidoc/[AsciiDoc report of JGiven itself]
 
 === Maven Plugin
 
-For Maven there exists a plugin that can be used as follows:
+For Maven, there exists a plugin that can be used as follows:
 
 [source,xml,subs="verbatim,attributes"]
 ----
@@ -138,7 +139,7 @@ All of them are optional.
 
 |format
 |`html`
-|The format of the generated report. Can be _html_, _text_ or _asciidoc_.
+|The format of the generated report. It Can be _html_, _text_ or _asciidoc_.
 
 |title
 |`JGiven Report`
@@ -154,7 +155,7 @@ All of them are optional.
 
 |excludeEmptyScenarios
 |`false`
-|Whether or not to exclude empty scenarios, i.e. scenarios without any steps, from the report.
+|Whether to exclude empty scenarios, i.e., scenarios without any steps, from the report.
 
 |outputDirectory
 |`${project.build.directory}/jgiven-reports/html`
@@ -217,7 +218,7 @@ plugins {
 
 When using Kotlin, make sure the JGiven Gradle plugin is configured _after_ the `kotlin("jvm")` plugin.
 
-Alternatively you can configure the plugin as follows:
+Alternatively, you can configure the plugin as follows:
 
 [source,gradle,subs="verbatim,attributes"]
 ----
