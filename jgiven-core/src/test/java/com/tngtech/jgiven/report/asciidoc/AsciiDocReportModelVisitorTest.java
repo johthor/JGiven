@@ -16,6 +16,7 @@ import com.tngtech.jgiven.report.model.StepStatus;
 import com.tngtech.jgiven.report.model.Tag;
 import com.tngtech.jgiven.report.model.Word;
 import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,7 +34,7 @@ public class AsciiDocReportModelVisitorTest {
     @Test
     public void visits_a_simple_report() {
         // given
-        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase(
+        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase("",
                 mkStep("Given", "state"),
                 mkStep("When", "action"),
                 mkStep("Then", "outcome"))));
@@ -57,11 +58,11 @@ public class AsciiDocReportModelVisitorTest {
         // given
 
         ReportModel report = mkReport(
-                mkScenario("Scenario One", false, mkScenarioCase(
+                mkScenario("Scenario One", false, mkScenarioCase("",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome"))),
-                mkScenario("Scenario Two", false, mkScenarioCase(
+                mkScenario("Scenario Two", false, mkScenarioCase("",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome"))));
@@ -89,11 +90,11 @@ public class AsciiDocReportModelVisitorTest {
     public void visits_a_scenario_with_two_standalone_cases() {
         // given
         ReportModel report = mkReport(mkScenario("Simple Scenario", false,
-                mkScenarioCase(
+                mkScenarioCase("",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome")),
-                mkScenarioCase(
+                mkScenarioCase("Something failed",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome"))));
@@ -114,6 +115,7 @@ public class AsciiDocReportModelVisitorTest {
                         "FirstStepBlock",
                         "StepBlock",
                         "StepBlock",
+                        "CaseFooterBlock",
                         "ScenarioFooterBlock"));
     }
 
@@ -121,11 +123,11 @@ public class AsciiDocReportModelVisitorTest {
     public void visits_a_scenario_with_two_cases_as_table() {
         // given
         ReportModel report = mkReport(mkScenario("Simple Scenario", true,
-                mkScenarioCase(
+                mkScenarioCase("",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome")),
-                mkScenarioCase(
+                mkScenarioCase("",
                         mkStep("Given", "state"),
                         mkStep("When", "action"),
                         mkStep("Then", "outcome"))));
@@ -148,7 +150,7 @@ public class AsciiDocReportModelVisitorTest {
     @Test
     public void visits_a_scenario_with_a_section() {
         // given
-        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase(
+        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase("",
                 mkSectionTitle("Some Section"),
                 mkStep("Given", "state"),
                 mkStep("When", "action"),
@@ -171,7 +173,7 @@ public class AsciiDocReportModelVisitorTest {
     @Test
     public void visits_a_scenario_with_two_sections() {
         // given
-        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase(
+        ReportModel report = mkReport(mkScenario("Simple Scenario", false, mkScenarioCase("",
                 mkSectionTitle("First Section"),
                 mkStep("Given", "state"),
                 mkStep("When", "action"),
@@ -198,6 +200,21 @@ public class AsciiDocReportModelVisitorTest {
                         "ScenarioFooterBlock"));
     }
 
+    @Test
+    public void counts_tagged_scenarios() {
+        // given
+        ReportModel report = mkReport(mkTaggedScenario("Tagged Scenario", mkScenarioCase("",
+                mkStep("Given", "state"),
+                mkStep("When", "action"),
+                mkStep("Then", "outcome")), new Tag("org.example.ExampleTag")));
+
+        // when
+        report.accept(reportModelVisitor);
+
+        // then
+        assertThat(reportModelVisitor.getUsedTags()).containsExactlyEntriesOf(Map.of("org.example.ExampleTag", 1));
+    }
+
     private static ReportModel mkReport(final ScenarioModel... scenarios) {
         ReportModel report = new ReportModel();
         for (final ScenarioModel scenarioModel : scenarios) {
@@ -218,8 +235,23 @@ public class AsciiDocReportModelVisitorTest {
         return scenario;
     }
 
-    private static ScenarioCaseModel mkScenarioCase(final StepModel... steps) {
+    private static ScenarioModel mkTaggedScenario(final String description, final ScenarioCaseModel caseModel,
+                                                  final Tag... tags) {
+        ScenarioModel scenario = new ScenarioModel();
+        scenario.setDescription(description);
+        scenario.setCasesAsTable(false);
+        scenario.addCase(caseModel);
+        for (final Tag tag : tags) {
+            scenario.addTag(tag);
+        }
+        return scenario;
+    }
+
+    private static ScenarioCaseModel mkScenarioCase(final String errorMessage, final StepModel... steps) {
         ScenarioCaseModel scenarioCase = new ScenarioCaseModel();
+        if (!errorMessage.isBlank()) {
+            scenarioCase.setErrorMessage(errorMessage);
+        }
         for (final StepModel step : steps) {
             scenarioCase.addStep(step);
         }

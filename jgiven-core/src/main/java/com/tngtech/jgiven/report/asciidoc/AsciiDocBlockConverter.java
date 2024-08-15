@@ -112,7 +112,9 @@ class AsciiDocBlockConverter implements ReportBlockConverter {
             blockContent.append(LINE_BREAK);
             blockContent.append(LINE_BREAK);
             blockContent.append("Tags: ");
-            blockContent.append(tags.stream().map(tag -> "_" + TagMapper.toHumanReadableLabel(tag) + "_").collect(joining(", ")));
+            blockContent.append(tags.stream()
+                    .map(tag -> "_" + TagMapper.toHumanReadableLabel(tag) + "_")
+                    .collect(joining(", ")));
         }
 
         return blockContent.toString();

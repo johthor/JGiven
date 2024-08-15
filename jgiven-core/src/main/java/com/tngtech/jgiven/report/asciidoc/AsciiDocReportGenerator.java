@@ -23,8 +23,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,23 +73,25 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
             return;
         }
 
-        writeFeatureFiles();
+        completeReportModel.getAllReportModels().stream()
+                .sorted(Comparator.comparing(AsciiDocReportGenerator::byFeatureName))
+                .forEach(this::writeFeatureFile);
 
         writeIndexFileForAllScenarios();
-
         writeIndexFileForFailedScenarios();
-
         writeIndexFileForPendingScenarios();
 
-        final HierarchyCalculator hierarchyCalculator = new HierarchyCalculator(allTags, taggedScenarioFeatures);
+        writeTotalStatisticsFile();
 
-        final Map<String, Map<String, List<String>>> groupedTags = hierarchyCalculator.computeGroupedTag();
+        final TagHierarchyCalculator tagHierarchyCalculator = new TagHierarchyCalculator(allTags, taggedScenarioFeatures);
 
-        groupedTags.forEach(this::writeIndexFileForTaggedScenarios);
+        final SortedMap<TagHierarchyCalculator.TagGroup, Map<Tag, List<String>>> groupedTags = tagHierarchyCalculator.computeTagGroups();
+
+        tagHierarchyCalculator.computeTagHierarchy();
+
+        groupedTags.forEach(this::writeTagFile);
 
         writeIndexFileForAllTags(groupedTags);
-
-        writeTotalStatisticsFile();
 
         writeIndexFileForFullReport(config.getTitle());
 
@@ -112,16 +114,12 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
         return true;
     }
 
-    private void writeFeatureFiles() {
-        completeReportModel.getAllReportModels().stream()
-                .sorted(Comparator.comparing(AsciiDocReportGenerator::byFeatureName))
-                .forEach(reportModelFile -> {
-                    final ReportStatistics statistics = completeReportModel.getStatistics(reportModelFile);
-                    final String featureName = Files.getNameWithoutExtension(reportModelFile.file().getName());
-                    final List<String> asciiDocBlocks = collectReportBlocks(featureName, statistics, reportModelFile.model());
+    private void writeFeatureFile(final ReportModelFile reportModelFile) {
+        final ReportStatistics statistics = completeReportModel.getStatistics(reportModelFile);
+        final String featureName = Files.getNameWithoutExtension(reportModelFile.file().getName());
+        final List<String> asciiDocBlocks = collectReportBlocks(featureName, statistics, reportModelFile.model());
 
-                    writeAsciiDocBlocksToFile(featuresDir, featureName, asciiDocBlocks);
-                });
+        writeAsciiDocBlocksToFile(featuresDir, featureName, asciiDocBlocks);
     }
 
     private void writeIndexFileForAllScenarios() {
@@ -162,10 +160,8 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
         writeAsciiDocBlocksToFile(targetDir, "pendingScenarios", asciiDocBlocks);
     }
 
-    private void writeIndexFileForTaggedScenarios(final String tagType, final Map<String, List<String>> taggedScenarios) {
-        final Optional<Tag> firstTag = taggedScenarios.keySet().stream()
-                .findFirst()
-                .map(allTags::get);
+    private void writeTagFile(final TagHierarchyCalculator.TagGroup tagGroup, final Map<Tag, List<String>> taggedScenarios) {
+        final Optional<Tag> firstTag = taggedScenarios.keySet().stream().findFirst();
 
         if (firstTag.isEmpty()) {
             return;
@@ -177,10 +173,10 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
                 ? singleValuedTag(taggedScenarios, firstTag.get(), numTaggedScenarios)
                 : multiValuedTag(taggedScenarios, firstTag.get(), numTaggedScenarios);
 
-        writeAsciiDocBlocksToFile(tagsDir, tagType, asciiDocBlocks);
+        writeAsciiDocBlocksToFile(tagsDir, tagGroup.fullType(), asciiDocBlocks);
     }
 
-    private List<String> multiValuedTag(final Map<String, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
+    private List<String> multiValuedTag(final Map<Tag, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
         final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
                 tag.getName(), "tagged scenarios", numTaggedScenarios);
 
@@ -193,7 +189,7 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
         return asciiDocBlocks;
     }
 
-    private List<String> singleValuedTag(final Map<String, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
+    private List<String> singleValuedTag(final Map<Tag, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
         final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
                 tag.toString(), "tagged scenarios", numTaggedScenarios);
 
@@ -209,16 +205,11 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
     }
 
 
-    private void writeIndexFileForAllTags(final Map<String, Map<String, List<String>>> strings) {
+    private void writeIndexFileForAllTags(final SortedMap<TagHierarchyCalculator.TagGroup, Map<Tag, List<String>>> strings) {
 
         final List<String> tagFiles = strings.entrySet().stream()
-                .sorted((o1, o2) -> {
-                    final Tag tag1 = allTags.get(o1.getValue().keySet().stream().findFirst().orElse(""));
-                    final Tag tag2 = allTags.get(o2.getValue().keySet().stream().findFirst().orElse(""));
-                    return Objects.compare(tag1, tag2, Comparator.comparing(Tag::getName));
-
-                })
-                .map(entry -> entry.getKey().replace(' ', '_'))
+                .sorted(Comparator.comparing(tagGroupMapEntry -> tagGroupMapEntry.getKey().name()))
+                .map(entry -> entry.getKey().name().replace(' ', '_'))
                 .collect(Collectors.toList());
         final Integer total = taggedScenarioCounts.values().stream().reduce(Integer::sum).orElse(999);
         final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
@@ -332,5 +323,4 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
             }
         }
     }
-
 }
