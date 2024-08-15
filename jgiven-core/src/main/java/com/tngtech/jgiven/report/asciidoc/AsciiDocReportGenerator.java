@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,13 +84,13 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
 
         final TagHierarchyCalculator tagHierarchyCalculator = new TagHierarchyCalculator(allTags, taggedScenarioFeatures);
 
-        final SortedMap<TagHierarchyCalculator.TagGroup, Map<Tag, List<String>>> groupedTags = tagHierarchyCalculator.computeTagGroups();
-
-        tagHierarchyCalculator.computeTagHierarchy();
-
+        final Map<TagHierarchyCalculator.TagGroup, List<Tag>> groupedTags = tagHierarchyCalculator.computeTagGroups();
         groupedTags.forEach(this::writeTagFile);
 
         writeIndexFileForAllTags(groupedTags);
+
+//        tagHierarchyCalculator.computeTagHierarchy();
+
 
         writeIndexFileForFullReport(config.getTitle());
 
@@ -160,52 +159,52 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
         writeAsciiDocBlocksToFile(targetDir, "pendingScenarios", asciiDocBlocks);
     }
 
-    private void writeTagFile(final TagHierarchyCalculator.TagGroup tagGroup, final Map<Tag, List<String>> taggedScenarios) {
-        final Optional<Tag> firstTag = taggedScenarios.keySet().stream().findFirst();
+    private void writeTagFile(final TagHierarchyCalculator.TagGroup tagGroup, final List<Tag> tags) {
+        final Optional<Tag> firstTag = tags.stream().findFirst();
 
         if (firstTag.isEmpty()) {
             return;
         }
 
-        final int numTaggedScenarios = taggedScenarios.keySet().stream().mapToInt(taggedScenarioCounts::get).sum();
+        final int numTaggedScenarios = tags.stream().mapToInt(tag -> taggedScenarioCounts.get(tag.toIdString())).sum();
 
-        final List<String> asciiDocBlocks = taggedScenarios.keySet().size() == 1
-                ? singleValuedTag(taggedScenarios, firstTag.get(), numTaggedScenarios)
-                : multiValuedTag(taggedScenarios, firstTag.get(), numTaggedScenarios);
+        final List<String> asciiDocBlocks = tags.size() == 1
+                ? singleValuedTag(firstTag.get(), numTaggedScenarios)
+                : multiValuedTag(tags, firstTag.get(), numTaggedScenarios);
 
         writeAsciiDocBlocksToFile(tagsDir, tagGroup.fullType(), asciiDocBlocks);
     }
 
-    private List<String> multiValuedTag(final Map<Tag, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
-        final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
-                tag.getName(), "tagged scenarios", numTaggedScenarios);
-
-        final List<String> asciiDocBlocks = snippetGenerator.generateIntroSnippet(tag.getDescription());
-        taggedScenarios.forEach((tagId, features) -> {
-            final List<String> snippet = snippetGenerator.generateTagSnippet(
-                    allTags.get(tagId), taggedScenarioCounts.get(tagId), features, 0);
-            asciiDocBlocks.addAll(snippet);
-        });
-        return asciiDocBlocks;
-    }
-
-    private List<String> singleValuedTag(final Map<Tag, List<String>> taggedScenarios, final Tag tag, final int numTaggedScenarios) {
+    private List<String> singleValuedTag(final Tag tag, final int numTaggedScenarios) {
         final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
                 tag.toString(), "tagged scenarios", numTaggedScenarios);
 
         final List<String> asciiDocBlocks = snippetGenerator.generateIntroSnippet(tag.getDescription());
-        taggedScenarios.forEach((tagId, features) -> {
-            final Tag valueTag = allTags.get(tagId);
-            final String tagName = TagMapper.toAsciiDocTagName(valueTag);
-            asciiDocBlocks.add("=== Scenarios");
-            final List<String> snippet = snippetGenerator.generateIndexSnippet("../" + FEATURE_PATH, features, tagName, 0);
+        final List<String> features = taggedScenarioFeatures.get(tag.toIdString());
+        final String tagName = TagMapper.toAsciiDocTagName(tag);
+        asciiDocBlocks.add("=== Scenarios");
+        final List<String> snippet = snippetGenerator.generateIndexSnippet("../" + FEATURE_PATH, features, tagName, 0);
+        asciiDocBlocks.addAll(snippet);
+        return asciiDocBlocks;
+    }
+
+    private List<String> multiValuedTag(final List<Tag> tags, final Tag mainTag, final int numTaggedScenarios) {
+        final AsciiDocSnippetGenerator snippetGenerator = new AsciiDocSnippetGenerator(
+                mainTag.getName(), "tagged scenarios", numTaggedScenarios);
+
+        final List<String> asciiDocBlocks = snippetGenerator.generateIntroSnippet(mainTag.getDescription());
+        tags.forEach(tag -> {
+            final String tagId = tag.toIdString();
+            final List<String> features = taggedScenarioFeatures.get(tagId);
+            final List<String> snippet = snippetGenerator.generateTagSnippet(
+                    tag, taggedScenarioCounts.get(tagId), features, 0);
             asciiDocBlocks.addAll(snippet);
         });
         return asciiDocBlocks;
     }
 
 
-    private void writeIndexFileForAllTags(final SortedMap<TagHierarchyCalculator.TagGroup, Map<Tag, List<String>>> strings) {
+    private void writeIndexFileForAllTags(final Map<TagHierarchyCalculator.TagGroup, List<Tag>> strings) {
 
         final List<String> tagFiles = strings.entrySet().stream()
                 .sorted(Comparator.comparing(tagGroupMapEntry -> tagGroupMapEntry.getKey().name()))
@@ -218,8 +217,7 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
 
         final List<String> asciiDocBlocks = snippetGenerator.generateIntroSnippet("");
         asciiDocBlocks.addAll(snippetGenerator.generateIndexSnippet("tags", tagFiles, "", 1));
-        writeAsciiDocBlocksToFile(targetDir, "allTags",
-                asciiDocBlocks);
+        writeAsciiDocBlocksToFile(targetDir, "allTags", asciiDocBlocks);
 
     }
 
@@ -276,8 +274,6 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
             final String featureName,
             final ReportStatistics statistics,
             final ReportModel model) {
-        allTags.putAll(model.getTagMap());
-
         allFeatures.add(featureName);
         if (statistics.numFailedScenarios > 0) {
             failedScenarioFeatures.add(featureName);
@@ -289,6 +285,7 @@ public class AsciiDocReportGenerator extends AbstractReportGenerator {
         final AsciiDocReportModelVisitor visitor = new AsciiDocReportModelVisitor(blockConverter, statistics);
         model.accept(visitor);
 
+        allTags.putAll(model.getTagMap());
         visitor.getUsedTags().forEach((tagId, count) -> {
             taggedScenarioCounts.merge(tagId, count, Integer::sum);
             taggedScenarioFeatures.computeIfAbsent(tagId, key -> new ArrayList<>()).add(featureName);

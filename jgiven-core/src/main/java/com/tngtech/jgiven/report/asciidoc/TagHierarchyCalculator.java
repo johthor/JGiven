@@ -1,7 +1,6 @@
 package com.tngtech.jgiven.report.asciidoc;
 
 import com.tngtech.jgiven.report.model.Tag;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,35 +8,28 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class TagHierarchyCalculator {
-    private final Map<String, List<String>> taggedScenarioFiles;
     private final Map<String, Tag> allTags;
+    private final Map<String, List<String>> taggedScenarioFiles;
 
     public TagHierarchyCalculator(final Map<String, Tag> allTags, final Map<String, List<String>> taggedScenarioFiles) {
-        this.taggedScenarioFiles = taggedScenarioFiles;
         this.allTags = allTags;
+        this.taggedScenarioFiles = taggedScenarioFiles;
     }
 
-    SortedMap<TagGroup, Map<Tag, List<String>>> computeTagGroups() {
-        final Stream<Entry<String, List<String>>> entryStream = taggedScenarioFiles.entrySet().stream()
-                .filter(entry -> allTags.get(entry.getKey()).getShownInNavigation());
-        return entryStream
+    Map<TagGroup, List<Tag>> computeTagGroups() {
+        return allTags.entrySet().stream()
                 .collect(Collectors.groupingBy(
-                        this::tagGroup,
-                        () -> new TreeMap<>(Comparator.comparing(TagGroup::name)),
-                        Collectors.toMap(entry -> allTags.get(entry.getKey()), Entry::getValue)));
+                        this::toTagGroup,
+                        Collectors.mapping(Entry::getValue, Collectors.toList())));
     }
 
-    private TagGroup tagGroup(final Entry<String, List<String>> entry) {
-        final Tag tag = allTags.get(entry.getKey());
+    private TagGroup toTagGroup(final Entry<String, Tag> entry) {
+        final Tag tag = entry.getValue();
 
         return new TagGroup(tag.getFullType(), tag.getName());
-
     }
 
     public Map<String, Set<Tag>> computeTagHierarchy() {
@@ -46,7 +38,7 @@ public class TagHierarchyCalculator {
         allTags.forEach((tagId, tag) -> {
             hierarchy.putIfAbsent(tagId, new HashSet<>());
             tag.getTags().forEach(parentId ->
-                hierarchy.computeIfAbsent(parentId, k -> new HashSet<>()).add(tag)
+                    hierarchy.computeIfAbsent(parentId, k -> new HashSet<>()).add(tag)
             );
         });
 

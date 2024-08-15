@@ -7,7 +7,6 @@ import com.tngtech.jgiven.report.model.Tag;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import org.junit.Test;
 
 public class TagHierarchyCalculatorTest {
@@ -25,7 +24,7 @@ public class TagHierarchyCalculatorTest {
         final TagHierarchyCalculator calculator = new TagHierarchyCalculator(allTags, taggedScenarioFiles);
 
         // when
-        final SortedMap<TagGroup, Map<Tag, List<String>>> groupedTags = calculator.computeTagGroups();
+        final Map<TagGroup, List<Tag>> groupedTags = calculator.computeTagGroups();
 
         // then
         assertThat(groupedTags).isEmpty();
@@ -40,7 +39,7 @@ public class TagHierarchyCalculatorTest {
         final TagHierarchyCalculator calculator = new TagHierarchyCalculator(allTags, taggedScenarioFiles);
 
         // when
-        final SortedMap<TagGroup, Map<Tag, List<String>>> groupedTags = calculator.computeTagGroups();
+        final Map<TagGroup, List<Tag>> groupedTags = calculator.computeTagGroups();
 
         // then
 //        assertThat(groupedTags).containsEntry(new TagHierarchyCalculator.TagGroup());
